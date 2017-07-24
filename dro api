@@ -1,3 +1,4 @@
 1. LOG IN APIs--
    onload apis- 1. http://localhost:8081/dro/auth/login
-2. 
+		2. http://localhost:8081/dro/auth/active-session
+		3. http://localhost:8081/dro/user/summary
