@@ -5,9 +5,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -15,6 +17,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.omg.PortableServer.Servant;
 
 import com.drofile.model.GenericExcelDto;
 
@@ -33,55 +36,69 @@ public class ExcelReader {
 			Iterator<Row> iterator = sheetNo.iterator();
 			
 			
-			
 			while (iterator.hasNext()) {
+				
+				GenericExcelDto dto = new GenericExcelDto();
+				
 				Row nextRow = iterator.next();
-				System.out.println("ROW INDEX : " + nextRow.getRowNum());
+				
+				//System.out.println("ROW INDEX : " + nextRow.getRowNum() +" >>> >> >");
+				
 				Iterator<Cell> cellIterator = nextRow.cellIterator();
+				
 				while (cellIterator.hasNext()) {
+					
 					Cell nextCell = cellIterator.next();
 					
-					if(nextRow.getRowNum() == 0) {
+					if(nextRow.getRowNum() == 0 && nextCell.getColumnIndex() == 1) {
 						surveyName = nextCell.getStringCellValue();
 					}
 					
+					if(nextRow.getRowNum() > 3) {
+					if(nextCell.getColumnIndex() <=3) {
+					//System.out.print("COLUMN INDEX: " + nextCell.getColumnIndex() +" - ");
 					
-					System.out.print("COLUMN INDEX: " + nextCell.getColumnIndex() +" - ");
-					switch (nextCell.getCellType()) {
-					case Cell.CELL_TYPE_STRING:
-						System.out.println(nextCell.getStringCellValue());
-						break;
-
-					case Cell.CELL_TYPE_NUMERIC:
-						System.out.println(nextCell.getNumericCellValue());
-						break;
+						//System.out.println(nextCell);
 						
-					case Cell.CELL_TYPE_BOOLEAN:
-						System.out.println(nextCell.getBooleanCellValue());
-						break;
-						
-					case Cell.CELL_TYPE_BLANK:
-						System.out.println();
-						break;
+						if(nextCell.getColumnIndex() ==2) {
+							String y = nextCell.toString();
+							//System.out.println("Y - >>> >> > " + y);
+							dto.setColumn2(y);
+						}
+						if(nextCell.getColumnIndex() == 3) {
+							String x = nextCell.toString();
+							if(x.equalsIgnoreCase("0.0")) {
+								dto.setColumn3("0");
+							}else {
+								dto.setColumn3(x);
+							}
+							
+							
+							//System.out.println("z - >>> >> > " + x);
+						}
 						
 					}
+				  }
+					
 				}
-				
+				if(dto.getColumn2() != null) {
+					dataSet.add(dto);
+				}
 				
 			}
 			
 			workbook.close();
 			inputStream.close();
-			System.out.println("SURVEY NAME >>> >> > " + surveyName);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+		JSONObject jsonObject = jsonFormatter(surveyName, dataSet);
+		System.out.println(jsonObject.toString());
 	}
 	
-	public static JSONObject jsonFormatter(String serveyName) {
+	public static JSONObject jsonFormatter(String surveyName, ArrayList<GenericExcelDto> primaryList) {
 
 		JSONObject parentJson = new JSONObject();
 		
@@ -89,48 +106,40 @@ public class ExcelReader {
 		
 		JSONArray questionList = new JSONArray();
 		
-		JSONArray choiceList = new JSONArray();
+		JSONArray choiceList = null;
 		
-		JSONObject questionAnswerSet = new JSONObject();
+		JSONObject questionAnswerSet;// = new JSONObject();
 		
 		try {
 			
-				questionAnswerSet.put("questionName", "My motivation is lower when I am fatigued");
-				{
-
-					choiseJson = new JSONObject();
-					choiseJson.put("name", "option1");
-					choiseJson.put("score", 1);
-					choiceList.put(choiseJson);
+			for(int i = 0; i < primaryList.size(); i = i+5) {
+				int count = 0;
+				
+				
+				
+				GenericExcelDto dto = primaryList.get(i);
+				
+				questionAnswerSet = new JSONObject();
+				choiceList = new JSONArray();
+				while (count<4) {
+					count ++;
+					GenericExcelDto dto2 = primaryList.get(i+count);
 					
 					choiseJson = new JSONObject();
-					choiseJson.put("name", "option2");
-					choiseJson.put("score", 2);
-					choiceList.put(choiseJson);
+					choiseJson.put("name", dto2.getColumn2());
+					choiseJson.put("score", dto2.getColumn3());
 					
-					choiseJson = new JSONObject();
-					choiseJson.put("name", "option3");
-					choiseJson.put("score", 3);
-					choiceList.put(choiseJson);
 					
-					choiseJson = new JSONObject();
-					choiseJson.put("name", "option4");
-					choiseJson.put("score", 4);
 					choiceList.put(choiseJson);
 					
 				}
-			
-			
-			questionAnswerSet.put("choice", choiceList);
-			//System.out.println(">>> >> > " + choiceList);
-			questionList.put(questionAnswerSet);
-			
-			
-			parentJson.put("surveyName", "TESTSURVEY");
+				questionAnswerSet.put("questionName", dto.getColumn2());
+				questionAnswerSet.put("choice", choiceList);
+				questionList.put(questionAnswerSet);
+				
+			}
+			parentJson.put("surveyName", surveyName);
 			parentJson.put("questionList", questionList);
-			
-			System.out.println(parentJson.toString());
-			
 			
 			
 		} catch (JSONException e) {
